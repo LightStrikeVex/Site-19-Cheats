@@ -4705,6 +4705,7 @@ CMDs[#CMDs + 1] = {NAME = 'promptr6', DESC = 'Prompts the game to switch your ri
 CMDs[#CMDs + 1] = {NAME = 'promptr15', DESC = 'Prompts the game to switch your rig type to R15'}
 CMDs[#CMDs + 1] = {NAME = 'wallwalk / walkonwalls', DESC = 'Walk on walls'}
 CMDs[#CMDs + 1] = {NAME = 'removeads / adblock', DESC = 'Automatically removes ad billboards'}
+CMDs[#CMDs + 1] = {NAME = 'mobilefly / fuck you', DESC = 'hi'}
 wait()
 
 for i = 1, #CMDs do
@@ -6822,113 +6823,133 @@ addcmd("exit", {}, function(args, speaker)
     game:Shutdown()
 end)
 
-local Noclipping = nil
-local Clip = true
-
-addcmd('noclip', {}, function(args, speaker)
-    Clip = false
-    wait(0.1)
-    local function NoclipLoop()
-        if Clip == false and speaker.Character ~= nil then
-            for _, child in pairs(speaker.Character:GetDescendants()) do
-                if child:IsA("BasePart") and child.CanCollide == true then
-                    child.CanCollide = false
-                end
-            end
-        end
-    end
-    Noclipping = RunService.Stepped:Connect(NoclipLoop)
-end)
-
-addcmd('clip', {'unnoclip'}, function(args, speaker)
-    if Noclipping then
-        Noclipping:Disconnect()
-    end
-    Clip = true
-end)
-
-addcmd('togglenoclip', {}, function(args, speaker)
-    if Clip then
-        execCmd('noclip')
-    else
-        execCmd('clip')
-    end
-end)
-
 local FLYING = false
 local QEfly = true
-local flySpeed = 50
-local vehicleFlySpeed = 50
+local iyflyspeed = 1
+local vehicleflyspeed = 1
+local flyKeyDown, flyKeyUp
 
-local function sFLY(vfly)
-    FLYING = true
-    local root = getRoot(Players.LocalPlayer.Character)
-    local bg = Instance.new('BodyGyro', root)
-    local bv = Instance.new('BodyVelocity', root)
-    bg.P = 9e4
-    bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
-    bg.cframe = root.CFrame
-    bv.velocity = Vector3.zero
-    bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
-    
-    local control = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
-    
-    local flyLoop = RunService.RenderStepped:Connect(function()
-        if FLYING then
-            bv.velocity = ((workspace.CurrentCamera.CFrame.LookVector * (control.F + control.B)) +
-                          ((workspace.CurrentCamera.CFrame * CFrame.new(control.L + control.R, 0, 0).p) - workspace.CurrentCamera.CFrame.p)) * (vfly and vehicleFlySpeed or flySpeed)
-            bg.cframe = workspace.CurrentCamera.CFrame
-        else
-            bg:Destroy()
-            bv:Destroy()
-            flyLoop:Disconnect()
+-- Función para comenzar a volar
+function sFLY(vfly)
+    repeat wait() until Players.LocalPlayer and Players.LocalPlayer.Character and getRoot(Players.LocalPlayer.Character) and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    repeat wait() until IYMouse
+    if flyKeyDown or flyKeyUp then flyKeyDown:Disconnect() flyKeyUp:Disconnect() end
+
+    local T = getRoot(Players.LocalPlayer.Character)
+    local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+    local lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+    local SPEED = 0
+
+    local function FLY()
+        FLYING = true
+        local BG = Instance.new('BodyGyro')
+        local BV = Instance.new('BodyVelocity')
+        BG.P = 9e4
+        BG.Parent = T
+        BV.Parent = T
+        BG.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        BG.cframe = T.CFrame
+        BV.velocity = Vector3.new(0, 0, 0)
+        BV.maxForce = Vector3.new(9e9, 9e9, 9e9)
+        task.spawn(function()
+            repeat wait()
+                if not vfly and Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+                    Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid').PlatformStand = true
+                end
+                if CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0 then
+                    SPEED = 50
+                elseif not (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0) and SPEED ~= 0 then
+                    SPEED = 0
+                end
+                if (CONTROL.L + CONTROL.R) ~= 0 or (CONTROL.F + CONTROL.B) ~= 0 or (CONTROL.Q + CONTROL.E) ~= 0 then
+                    BV.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (CONTROL.F + CONTROL.B)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).p) - workspace.CurrentCamera.CoordinateFrame.p)) * SPEED
+                    lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R}
+                elseif (CONTROL.L + CONTROL.R) == 0 and (CONTROL.F + CONTROL.B) == 0 and (CONTROL.Q + CONTROL.E) == 0 and SPEED ~= 0 then
+                    BV.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (lCONTROL.F + lCONTROL.B)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(lCONTROL.L + lCONTROL.R, (lCONTROL.F + lCONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).p) - workspace.CurrentCamera.CoordinateFrame.p)) * SPEED
+                else
+                    BV.velocity = Vector3.new(0, 0, 0)
+                end
+                BG.cframe = workspace.CurrentCamera.CoordinateFrame
+            until not FLYING
+            CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+            lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+            SPEED = 0
+            BG:Destroy()
+            BV:Destroy()
+            if Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+                Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid').PlatformStand = false
+            end
+        end)
+    end
+    flyKeyDown = IYMouse.KeyDown:Connect(function(KEY)
+        if KEY:lower() == 'w' then
+            CONTROL.F = (vfly and vehicleflyspeed or iyflyspeed)
+        elseif KEY:lower() == 's' then
+            CONTROL.B = - (vfly and vehicleflyspeed or iyflyspeed)
+        elseif KEY:lower() == 'a' then
+            CONTROL.L = - (vfly and vehicleflyspeed or iyflyspeed)
+        elseif KEY:lower() == 'd' then
+            CONTROL.R = (vfly and vehicleflyspeed or iyflyspeed)
+        elseif QEfly and KEY:lower() == 'e' then
+            CONTROL.Q = (vfly and vehicleflyspeed or iyflyspeed)*2
+        elseif QEfly and KEY:lower() == 'q' then
+            CONTROL.E = -(vfly and vehicleflyspeed or iyflyspeed)*2
+        end
+        pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Track end)
+    end)
+    flyKeyUp = IYMouse.KeyUp:Connect(function(KEY)
+        if KEY:lower() == 'w' then
+            CONTROL.F = 0
+        elseif KEY:lower() == 's' then
+            CONTROL.B = 0
+        elseif KEY:lower() == 'a' then
+            CONTROL.L = 0
+        elseif KEY:lower() == 'd' then
+            CONTROL.R = 0
+        elseif KEY:lower() == 'e' then
+            CONTROL.Q = 0
+        elseif KEY:lower() == 'q' then
+            CONTROL.E = 0
         end
     end)
-    
-    IYMouse.KeyDown:Connect(function(key)
-        if key == 'w' then control.F = (vfly and vehicleFlySpeed or flySpeed) end
-        if key == 's' then control.B = -(vfly and vehicleFlySpeed or flySpeed) end
-        if key == 'a' then control.L = -(vfly and vehicleFlySpeed or flySpeed) end
-        if key == 'd' then control.R = (vfly and vehicleFlySpeed or flySpeed) end
-        if key == 'q' and QEfly then control.Q = (vfly and vehicleFlySpeed or flySpeed) end
-        if key == 'e' and QEfly then control.E = -(vfly and vehicleFlySpeed or flySpeed) end
-    end)
-    
-    IYMouse.KeyUp:Connect(function(key)
-        if key == 'w' then control.F = 0 end
-        if key == 's' then control.B = 0 end
-        if key == 'a' then control.L = 0 end
-        if key == 'd' then control.R = 0 end
-        if key == 'q' then control.Q = 0 end
-        if key == 'e' then control.E = 0 end
-    end)
+    FLY()
 end
 
-local function NOFLY()
+-- Función para detener el vuelo
+function NOFLY()
     FLYING = false
-    local root = getRoot(Players.LocalPlayer.Character)
-    for _, obj in ipairs(root:GetChildren()) do
-        if obj:IsA('BodyGyro') or obj:IsA('BodyVelocity') then
-            obj:Destroy()
-        end
+    if flyKeyDown or flyKeyUp then flyKeyDown:Disconnect() flyKeyUp:Disconnect() end
+    if Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+        Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid').PlatformStand = false
     end
+    pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end)
 end
 
+-- Comandos usando addcmd
 addcmd('fly', {}, function(args, speaker)
-    sFLY(false)
-end)
-
-addcmd('unfly', {}, function(args, speaker)
-    NOFLY()
-end)
-
-addcmd('togglefly', {}, function(args, speaker)
-    if FLYING then
-        execCmd('unfly')
+    if not FLYING then
+        sFLY(false)  -- Comienza a volar si no está volando
     else
-        execCmd('fly')
+        NOFLY()  -- Detiene el vuelo si ya está volando
     end
 end)
+
+addcmd('mobilefly', {}, function(args, speaker)
+    if not FLYING then
+        mobilefly(speaker, false)  -- Activa el vuelo móvil
+    else
+        unmobilefly(speaker)  -- Detiene el vuelo móvil
+    end
+end)
+
+addcmd('togglevfly', {}, function(args, speaker)
+    if FLYING then
+        NOFLY()  -- Detiene el vuelo si ya está volando
+    else
+        sFLY(false)  -- Inicia el vuelo
+    end
+end)
+
 
 Floating = false
 floatName = randomString()
